@@ -15,72 +15,32 @@ import {
   Settings,
   Plus,
   Eye,
+  Loader2,
 } from "lucide-react"
-
-// Mock data for trading pools
-const tradingPools = [
-  {
-    id: "pool-001",
-    name: "DeFi Alpha Strategy",
-    trader: "0x742d...4e8f",
-    totalValue: 2450000,
-    followers: 1247,
-    performance: 24.5,
-    risk: "Medium",
-    status: "Active",
-    aum: 2450000,
-    fee: 2.5,
-    minInvestment: 1000,
-    maxDrawdown: -8.2,
-    sharpeRatio: 1.85,
-    trades: 156,
-    winRate: 68.5,
-  },
-  {
-    id: "pool-002",
-    name: "Arbitrage Master",
-    trader: "0x8a3b...9c2d",
-    totalValue: 1850000,
-    followers: 892,
-    performance: 18.7,
-    risk: "Low",
-    status: "Active",
-    aum: 1850000,
-    fee: 1.8,
-    minInvestment: 500,
-    maxDrawdown: -4.1,
-    sharpeRatio: 2.12,
-    trades: 324,
-    winRate: 74.2,
-  },
-  {
-    id: "pool-003",
-    name: "High Frequency Bot",
-    trader: "0x1f5e...7a9b",
-    totalValue: 980000,
-    followers: 456,
-    performance: -3.2,
-    risk: "High",
-    status: "Paused",
-    aum: 980000,
-    fee: 3.0,
-    minInvestment: 2000,
-    maxDrawdown: -15.8,
-    sharpeRatio: 0.92,
-    trades: 1247,
-    winRate: 52.3,
-  },
-]
-
-const poolStats = {
-  totalPools: 24,
-  activePools: 18,
-  totalAUM: 12500000,
-  avgPerformance: 16.8,
-  totalFollowers: 5847,
-}
+import { useTradingPools } from "@/lib/api/hooks"
+import { useState } from "react"
 
 export default function TradingPoolsContent() {
+  const [activeTab, setActiveTab] = useState("all")
+  const { data: poolsData, error, isLoading } = useTradingPools()
+
+  const tradingPools = poolsData?.pools || []
+  const poolStats = poolsData?.stats || {
+    totalPools: 0,
+    activePools: 0,
+    totalAUM: 0,
+    avgPerformance: 0,
+    totalFollowers: 0,
+  }
+
+  const filteredPools = tradingPools.filter((pool: any) => {
+    if (activeTab === "all") return true
+    if (activeTab === "active") return pool.status === "Active"
+    if (activeTab === "paused") return pool.status === "Paused"
+    if (activeTab === "top") return pool.performance > 20
+    return true
+  })
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -157,7 +117,7 @@ export default function TradingPoolsContent() {
           <CardDescription>Übersicht aller verfügbaren Trading Pools mit Performance-Metriken</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="all" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4 bg-muted">
               <TabsTrigger value="all">Alle Pools</TabsTrigger>
               <TabsTrigger value="active">Aktiv</TabsTrigger>
@@ -165,122 +125,139 @@ export default function TradingPoolsContent() {
               <TabsTrigger value="top">Top Performer</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="all" className="space-y-4 mt-6">
-              <div className="space-y-4">
-                {tradingPools.map((pool) => (
-                  <Card key={pool.id} className="bg-muted/50 border-border">
-                    <CardContent className="p-6">
-                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                        {/* Pool Info */}
-                        <div className="lg:col-span-3">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center">
-                              <Wallet className="h-5 w-5 text-accent" />
+            <TabsContent value={activeTab} className="space-y-4 mt-6">
+              {isLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-accent" />
+                  <span className="ml-2 text-muted-foreground">Lade Trading Pools...</span>
+                </div>
+              )}
+
+              {error && (
+                <div className="text-center py-8 text-destructive">
+                  Fehler beim Laden der Trading Pools. Bitte versuchen Sie es später erneut.
+                </div>
+              )}
+
+              {!isLoading && !error && filteredPools.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  Keine Trading Pools gefunden für diesen Filter.
+                </div>
+              )}
+
+              {!isLoading && !error && filteredPools.length > 0 && (
+                <div className="space-y-4">
+                  {filteredPools.map((pool: any) => (
+                    <Card key={pool.id} className="bg-muted/50 border-border">
+                      <CardContent className="p-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                          {/* Pool Info */}
+                          <div className="lg:col-span-3">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-10 h-10 bg-accent/20 rounded-lg flex items-center justify-center">
+                                <Wallet className="h-5 w-5 text-accent" />
+                              </div>
+                              <div>
+                                <h3 className="font-semibold text-foreground">{pool.name}</h3>
+                                <p className="text-sm text-muted-foreground">{pool.trader_address}</p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Performance */}
+                          <div className="lg:col-span-2">
+                            <div className="flex items-center space-x-2">
+                              {pool.performance_30d > 0 ? (
+                                <TrendingUp className="h-4 w-4 text-chart-4" />
+                              ) : (
+                                <TrendingDown className="h-4 w-4 text-chart-5" />
+                              )}
+                              <span
+                                className={`font-semibold ${pool.performance_30d > 0 ? "text-chart-4" : "text-chart-5"}`}
+                              >
+                                {pool.performance_30d > 0 ? "+" : ""}
+                                {pool.performance_30d}%
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">30d Performance</p>
+                          </div>
+
+                          {/* AUM */}
+                          <div className="lg:col-span-2">
+                            <div className="text-lg font-semibold text-foreground">
+                              ${(pool.total_aum / 1000000).toFixed(2)}M
+                            </div>
+                            <p className="text-sm text-muted-foreground">Assets Under Management</p>
+                          </div>
+
+                          {/* Followers */}
+                          <div className="lg:col-span-1">
+                            <div className="text-lg font-semibold text-foreground">
+                              {pool.follower_count.toLocaleString()}
+                            </div>
+                            <p className="text-sm text-muted-foreground">Follower</p>
+                          </div>
+
+                          {/* Risk & Status */}
+                          <div className="lg:col-span-2">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <Badge
+                                variant={
+                                  pool.risk_level === "Low"
+                                    ? "default"
+                                    : pool.risk_level === "Medium"
+                                      ? "secondary"
+                                      : "destructive"
+                                }
+                              >
+                                {pool.risk_level} Risk
+                              </Badge>
+                              <Badge variant={pool.status === "Active" ? "default" : "secondary"}>{pool.status}</Badge>
+                            </div>
+                            <div className="text-sm text-muted-foreground">Win Rate: {pool.win_rate}%</div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="lg:col-span-2">
+                            <div className="flex items-center space-x-2">
+                              <Button size="sm" variant="outline" className="border-border bg-transparent">
+                                <Eye className="h-4 w-4 mr-1" />
+                                Details
+                              </Button>
+                              <Button size="sm" variant="outline" className="border-border bg-transparent">
+                                <Settings className="h-4 w-4 mr-1" />
+                                Verwalten
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Additional Metrics */}
+                        <div className="mt-4 pt-4 border-t border-border">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Gebühr:</span>
+                              <span className="ml-2 text-foreground font-medium">{pool.management_fee}%</span>
                             </div>
                             <div>
-                              <h3 className="font-semibold text-foreground">{pool.name}</h3>
-                              <p className="text-sm text-muted-foreground">{pool.trader}</p>
+                              <span className="text-muted-foreground">Min. Investment:</span>
+                              <span className="ml-2 text-foreground font-medium">${pool.min_investment}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Max Drawdown:</span>
+                              <span className="ml-2 text-chart-5 font-medium">{pool.max_drawdown}%</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Sharpe Ratio:</span>
+                              <span className="ml-2 text-foreground font-medium">{pool.sharpe_ratio}</span>
                             </div>
                           </div>
                         </div>
-
-                        {/* Performance */}
-                        <div className="lg:col-span-2">
-                          <div className="flex items-center space-x-2">
-                            {pool.performance > 0 ? (
-                              <TrendingUp className="h-4 w-4 text-chart-4" />
-                            ) : (
-                              <TrendingDown className="h-4 w-4 text-chart-5" />
-                            )}
-                            <span className={`font-semibold ${pool.performance > 0 ? "text-chart-4" : "text-chart-5"}`}>
-                              {pool.performance > 0 ? "+" : ""}
-                              {pool.performance}%
-                            </span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">30d Performance</p>
-                        </div>
-
-                        {/* AUM */}
-                        <div className="lg:col-span-2">
-                          <div className="text-lg font-semibold text-foreground">
-                            ${(pool.aum / 1000000).toFixed(2)}M
-                          </div>
-                          <p className="text-sm text-muted-foreground">Assets Under Management</p>
-                        </div>
-
-                        {/* Followers */}
-                        <div className="lg:col-span-1">
-                          <div className="text-lg font-semibold text-foreground">{pool.followers.toLocaleString()}</div>
-                          <p className="text-sm text-muted-foreground">Follower</p>
-                        </div>
-
-                        {/* Risk & Status */}
-                        <div className="lg:col-span-2">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <Badge
-                              variant={
-                                pool.risk === "Low" ? "default" : pool.risk === "Medium" ? "secondary" : "destructive"
-                              }
-                            >
-                              {pool.risk} Risk
-                            </Badge>
-                            <Badge variant={pool.status === "Active" ? "default" : "secondary"}>{pool.status}</Badge>
-                          </div>
-                          <div className="text-sm text-muted-foreground">Win Rate: {pool.winRate}%</div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="lg:col-span-2">
-                          <div className="flex items-center space-x-2">
-                            <Button size="sm" variant="outline" className="border-border bg-transparent">
-                              <Eye className="h-4 w-4 mr-1" />
-                              Details
-                            </Button>
-                            <Button size="sm" variant="outline" className="border-border bg-transparent">
-                              <Settings className="h-4 w-4 mr-1" />
-                              Verwalten
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Additional Metrics */}
-                      <div className="mt-4 pt-4 border-t border-border">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">Gebühr:</span>
-                            <span className="ml-2 text-foreground font-medium">{pool.fee}%</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Min. Investment:</span>
-                            <span className="ml-2 text-foreground font-medium">${pool.minInvestment}</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Max Drawdown:</span>
-                            <span className="ml-2 text-chart-5 font-medium">{pool.maxDrawdown}%</span>
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Sharpe Ratio:</span>
-                            <span className="ml-2 text-foreground font-medium">{pool.sharpeRatio}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="active">
-              <div className="text-center py-8 text-muted-foreground">Aktive Pools werden hier angezeigt...</div>
-            </TabsContent>
-
-            <TabsContent value="paused">
-              <div className="text-center py-8 text-muted-foreground">Pausierte Pools werden hier angezeigt...</div>
-            </TabsContent>
-
-            <TabsContent value="top">
-              <div className="text-center py-8 text-muted-foreground">Top Performer werden hier angezeigt...</div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>

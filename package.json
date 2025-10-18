@@ -32,6 +32,7 @@
     "react-chartjs-2": "latest",
     "react-dom": "^18",
     "recharts": "latest",
+    "swr": "latest",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7"
   },
