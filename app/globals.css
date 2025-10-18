@@ -1,0 +1,228 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Updated theme to match DezentraleTrading design with dark theme and golden accents */
+    --background: 15 15 18; /* Dark background like DAO DAO */
+    --foreground: 250 250 250; /* Light text */
+    --card: 31 31 35; /* Dark card background */
+    --card-foreground: 250 250 250;
+    --popover: 31 31 35;
+    --popover-foreground: 250 250 250;
+    --primary: 45 212 191; /* Teal accent from design */
+    --primary-foreground: 15 15 18;
+    --secondary: 39 39 42; /* Darker secondary */
+    --secondary-foreground: 250 250 250;
+    --muted: 39 39 42;
+    --muted-foreground: 161 161 170;
+    --accent: 251 191 36; /* Golden yellow accent from Alpaca */
+    --accent-foreground: 15 15 18;
+    --destructive: 239 68 68;
+    --destructive-foreground: 250 250 250;
+    --border: 39 39 42;
+    --input: 39 39 42;
+    --ring: 45 212 191;
+    --radius: 0.5rem;
+    --chart-1: 251 191 36; /* Golden */
+    --chart-2: 45 212 191; /* Teal */
+    --chart-3: 139 92 246; /* Purple */
+    --chart-4: 34 197 94; /* Green */
+    --chart-5: 239 68 68; /* Red */
+
+    /* Menu colors for trading theme */
+    --menu-text: 250 250 250;
+    --menu-text-hover: 251 191 36;
+    --menu-icon: 161 161 170;
+    --menu-icon-hover: 251 191 36;
+    --menu-section-label: 113 113 122;
+  }
+
+  .dark {
+    /* Dark theme is now the primary theme for trading platform */
+    --background: 15 15 18;
+    --foreground: 250 250 250;
+    --card: 31 31 35;
+    --card-foreground: 250 250 250;
+    --popover: 31 31 35;
+    --popover-foreground: 250 250 250;
+    --primary: 45 212 191;
+    --primary-foreground: 15 15 18;
+    --secondary: 39 39 42;
+    --secondary-foreground: 250 250 250;
+    --muted: 39 39 42;
+    --muted-foreground: 161 161 170;
+    --accent: 251 191 36;
+    --accent-foreground: 15 15 18;
+    --destructive: 239 68 68;
+    --destructive-foreground: 250 250 250;
+    --border: 39 39 42;
+    --input: 39 39 42;
+    --ring: 45 212 191;
+    --chart-1: 251 191 36;
+    --chart-2: 45 212 191;
+    --chart-3: 139 92 246;
+    --chart-4: 34 197 94;
+    --chart-5: 239 68 68;
+
+    /* Menu colors */
+    --menu-text: 250 250 250;
+    --menu-text-hover: 251 191 36;
+    --menu-icon: 161 161 170;
+    --menu-icon-hover: 251 191 36;
+    --menu-section-label: 113 113 122;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
+/* Sidebar menu styling with CSS variables for theme customizer sync */
+.sidebar-menu-text {
+  color: hsl(var(--menu-text)) !important;
+}
+
+.sidebar-menu-icon {
+  color: hsl(var(--menu-icon)) !important;
+}
+
+.sidebar-menu-item:hover .sidebar-menu-text {
+  color: hsl(var(--menu-text-hover)) !important;
+}
+
+.sidebar-menu-item:hover .sidebar-menu-icon {
+  color: hsl(var(--menu-icon-hover)) !important;
+}
+
+.sidebar-section-label {
+  color: hsl(var(--menu-section-label)) !important;
+}
+
+/* Force correct colors for common classes */
+.bg-gray-50 {
+  background-color: hsl(var(--muted)) !important;
+}
+
+.bg-white {
+  background-color: hsl(var(--background)) !important;
+}
+
+.text-gray-900 {
+  color: hsl(var(--foreground)) !important;
+}
+
+.text-gray-600 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.text-gray-500 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.border-gray-200 {
+  border-color: hsl(var(--border)) !important;
+}
+
+.border-gray-300 {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* Dark mode overrides - now consistent with main theme */
+.dark .bg-gray-50 {
+  background-color: hsl(var(--muted)) !important;
+}
+
+.dark .bg-white {
+  background-color: hsl(var(--background)) !important;
+}
+
+.dark .text-gray-900 {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .text-gray-600 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .text-gray-500 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .border-gray-200 {
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .border-gray-300 {
+  border-color: hsl(var(--border)) !important;
+}
+
+/* RTL Support */
+[dir="rtl"] {
+  direction: rtl;
+}
+
+[dir="rtl"] .ml-auto {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+[dir="rtl"] .mr-auto {
+  margin-right: 0;
+  margin-left: auto;
+}
+
+/* Disable transitions for theme switching */
+*,
+*::before,
+*::after {
+  transition-duration: 0s !important;
+  animation-duration: 0s !important;
+  animation-delay: 0s !important;
+}
+
+/* Re-enable specific transitions we want to keep */
+.transition-all,
+.transition-colors,
+.transition-opacity,
+.transition-transform,
+.hover\:scale-105:hover,
+.hover\:shadow-xl:hover {
+  transition-duration: 0.2s !important;
+}
+
+/* Fast theme switching */
+.theme-transition {
+  transition: background-color 0.1s ease, color 0.1s ease, border-color 0.1s ease !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--foreground));
+}
