@@ -37,17 +37,11 @@ export interface PoolUpdate {
 }
 
 export class WebSocketService {
-  private connections: Map<string, WebSocket> = new Map()
-  private userSubscriptions: Map<string, Set<string>> = new Map() // userId -> Set of subscriptions
-  private poolSubscriptions: Map<string, Set<string>> = new Map() // poolId -> Set of userIds
-
-  // Simulate real-time price data (in production, this would come from external APIs)
   private priceData: Map<string, PriceUpdate> = new Map()
-  private priceInterval: NodeJS.Timeout | null = null
+  private listeners: Map<string, Set<(message: WebSocketMessage) => void>> = new Map()
 
   constructor() {
     this.initializePriceData()
-    this.startPriceUpdates()
   }
 
   private initializePriceData() {
@@ -64,190 +58,50 @@ export class WebSocketService {
       this.priceData.set(symbol, {
         symbol,
         price: basePrices[symbol as keyof typeof basePrices] || 1,
-        change24h: (Math.random() - 0.5) * 10, // Random change between -5% and +5%
+        change24h: (Math.random() - 0.5) * 10,
         volume24h: Math.random() * 1000000,
         timestamp: Date.now(),
       })
     })
   }
 
-  private startPriceUpdates() {
-    this.priceInterval = setInterval(() => {
-      this.updatePrices()
-    }, 2000) // Update every 2 seconds
+  getPriceData(): PriceUpdate[] {
+    return Array.from(this.priceData.values())
   }
 
-  private updatePrices() {
-    this.priceData.forEach((priceUpdate, symbol) => {
-      // Simulate price movement (±0.5% random walk)
-      const change = (Math.random() - 0.5) * 0.01
-      const newPrice = priceUpdate.price * (1 + change)
-
-      const updatedPrice: PriceUpdate = {
-        ...priceUpdate,
-        price: Math.round(newPrice * 100000) / 100000,
-        change24h: priceUpdate.change24h + change * 100,
-        timestamp: Date.now(),
-      }
-
-      this.priceData.set(symbol, updatedPrice)
-
-      // Broadcast price update to all connected clients
-      this.broadcast({
-        type: "price_update",
-        data: updatedPrice,
-        timestamp: Date.now(),
-      })
-    })
-  }
-
-  addConnection(userId: string, ws: WebSocket) {
-    this.connections.set(userId, ws)
-    this.userSubscriptions.set(userId, new Set())
-
-    ws.on("message", (message: string) => {
-      try {
-        const data = JSON.parse(message)
-        this.handleMessage(userId, data)
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error)
-      }
-    })
-
-    ws.on("close", () => {
-      this.removeConnection(userId)
-    })
-
-    // Send initial price data
-    this.priceData.forEach((priceUpdate) => {
-      this.sendToUser(userId, {
-        type: "price_update",
-        data: priceUpdate,
-        timestamp: Date.now(),
-      })
-    })
-  }
-
-  removeConnection(userId: string) {
-    this.connections.delete(userId)
-
-    // Remove user from pool subscriptions
-    this.poolSubscriptions.forEach((subscribers, poolId) => {
-      subscribers.delete(userId)
-      if (subscribers.size === 0) {
-        this.poolSubscriptions.delete(poolId)
-      }
-    })
-
-    this.userSubscriptions.delete(userId)
-  }
-
-  private handleMessage(userId: string, message: any) {
-    switch (message.type) {
-      case "subscribe_pool":
-        this.subscribeToPool(userId, message.poolId)
-        break
-      case "unsubscribe_pool":
-        this.unsubscribeFromPool(userId, message.poolId)
-        break
-      case "subscribe_portfolio":
-        this.subscribeToPortfolio(userId)
-        break
-      case "ping":
-        this.sendToUser(userId, { type: "pong", data: {}, timestamp: Date.now() })
-        break
+  subscribe(channel: string, callback: (message: WebSocketMessage) => void) {
+    if (!this.listeners.has(channel)) {
+      this.listeners.set(channel, new Set())
     }
+    this.listeners.get(channel)?.add(callback)
   }
 
-  private subscribeToPool(userId: string, poolId: string) {
-    const userSubs = this.userSubscriptions.get(userId)
-    if (userSubs) {
-      userSubs.add(`pool:${poolId}`)
-    }
-
-    let poolSubs = this.poolSubscriptions.get(poolId)
-    if (!poolSubs) {
-      poolSubs = new Set()
-      this.poolSubscriptions.set(poolId, poolSubs)
-    }
-    poolSubs.add(userId)
+  unsubscribe(channel: string, callback: (message: WebSocketMessage) => void) {
+    this.listeners.get(channel)?.delete(callback)
   }
 
-  private unsubscribeFromPool(userId: string, poolId: string) {
-    const userSubs = this.userSubscriptions.get(userId)
-    if (userSubs) {
-      userSubs.delete(`pool:${poolId}`)
-    }
-
-    const poolSubs = this.poolSubscriptions.get(poolId)
-    if (poolSubs) {
-      poolSubs.delete(userId)
-      if (poolSubs.size === 0) {
-        this.poolSubscriptions.delete(poolId)
-      }
-    }
+  emit(channel: string, message: WebSocketMessage) {
+    this.listeners.get(channel)?.forEach((callback) => callback(message))
   }
 
-  private subscribeToPortfolio(userId: string) {
-    const userSubs = this.userSubscriptions.get(userId)
-    if (userSubs) {
-      userSubs.add("portfolio")
-    }
-  }
-
-  sendToUser(userId: string, message: WebSocketMessage) {
-    const ws = this.connections.get(userId)
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(message))
-    }
-  }
-
-  broadcast(message: WebSocketMessage) {
-    this.connections.forEach((ws, userId) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(message))
-      }
-    })
-  }
-
-  broadcastToPool(poolId: string, message: WebSocketMessage) {
-    const subscribers = this.poolSubscriptions.get(poolId)
-    if (subscribers) {
-      subscribers.forEach((userId) => {
-        this.sendToUser(userId, { ...message, poolId })
-      })
-    }
-  }
-
-  // Called when a trade is executed
   async notifyTradeExecuted(trade: TradeUpdate) {
     const message: WebSocketMessage = {
       type: "trade_executed",
       data: trade,
       timestamp: Date.now(),
     }
-
-    // Notify pool subscribers
-    if (trade.poolId) {
-      this.broadcastToPool(trade.poolId, message)
-    }
-
-    // Notify all users for market data
-    this.broadcast(message)
+    this.emit("trades", message)
   }
 
-  // Called when pool data is updated
   async notifyPoolUpdate(poolUpdate: PoolUpdate) {
     const message: WebSocketMessage = {
       type: "pool_update",
       data: poolUpdate,
       timestamp: Date.now(),
     }
-
-    this.broadcastToPool(poolUpdate.id, message)
+    this.emit(`pool:${poolUpdate.id}`, message)
   }
 
-  // Called when user's portfolio is updated
   async notifyPortfolioUpdate(userId: string, portfolioData: any) {
     const message: WebSocketMessage = {
       type: "portfolio_update",
@@ -255,19 +109,8 @@ export class WebSocketService {
       timestamp: Date.now(),
       userId,
     }
-
-    this.sendToUser(userId, message)
-  }
-
-  destroy() {
-    if (this.priceInterval) {
-      clearInterval(this.priceInterval)
-    }
-    this.connections.clear()
-    this.userSubscriptions.clear()
-    this.poolSubscriptions.clear()
+    this.emit(`portfolio:${userId}`, message)
   }
 }
 
-// Global WebSocket service instance
 export const wsService = new WebSocketService()

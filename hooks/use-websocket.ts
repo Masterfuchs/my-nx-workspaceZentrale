@@ -18,13 +18,11 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
   const [priceData, setPriceData] = useState<Map<string, PriceUpdate>>(new Map())
 
   const wsRef = useRef<WebSocket | null>(null)
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectTimeoutRef = useRef<number | null>(null)
   const reconnectInterval = options.reconnectInterval || 5000
 
   const connect = useCallback(() => {
     try {
-      // In a real implementation, this would be a WebSocket connection
-      // For now, we'll simulate it with a mock connection
       console.log("Connecting to WebSocket...")
 
       // Simulate connection success
@@ -33,7 +31,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         setConnectionError(null)
         console.log("WebSocket connected")
 
-        // Start simulating real-time data
         startDataSimulation()
       }, 1000)
     } catch (error) {
@@ -63,24 +60,23 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
     reconnectTimeoutRef.current = setTimeout(() => {
       console.log("Attempting to reconnect...")
       connect()
-    }, reconnectInterval)
+    }, reconnectInterval) as unknown as number
   }, [connect, reconnectInterval])
 
   const startDataSimulation = useCallback(() => {
-    // Simulate real-time price updates
-    const priceUpdateInterval = setInterval(() => {
-      const symbols = ["BTC/USDT", "ETH/USDC", "MATIC/USDC", "USDC/DAI", "SAND/ETH"]
-      const basePrices = {
-        "BTC/USDT": 43200,
-        "ETH/USDC": 2450,
-        "MATIC/USDC": 0.85,
-        "USDC/DAI": 1.001,
-        "SAND/ETH": 0.0003,
-      }
+    const symbols = ["BTC/USDT", "ETH/USDC", "MATIC/USDC", "USDC/DAI", "SAND/ETH"]
+    const basePrices = {
+      "BTC/USDT": 43200,
+      "ETH/USDC": 2450,
+      "MATIC/USDC": 0.85,
+      "USDC/DAI": 1.001,
+      "SAND/ETH": 0.0003,
+    }
 
+    const priceUpdateInterval = setInterval(() => {
       symbols.forEach((symbol) => {
         const basePrice = basePrices[symbol as keyof typeof basePrices] || 1
-        const change = (Math.random() - 0.5) * 0.01 // ±0.5% change
+        const change = (Math.random() - 0.5) * 0.01
         const newPrice = basePrice * (1 + change)
 
         const priceUpdate: PriceUpdate = {
@@ -106,7 +102,6 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
       })
     }, 2000)
 
-    // Simulate occasional trade updates
     const tradeUpdateInterval = setInterval(() => {
       const symbols = ["BTC/USDT", "ETH/USDC", "MATIC/USDC"]
       const randomSymbol = symbols[Math.floor(Math.random() * symbols.length)]
@@ -135,9 +130,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
         timestamp: Date.now(),
       }
       setLastMessage(message)
-    }, 10000) // Every 10 seconds
+    }, 10000)
 
-    // Clean up intervals when component unmounts
     return () => {
       clearInterval(priceUpdateInterval)
       clearInterval(tradeUpdateInterval)
@@ -146,20 +140,16 @@ export function useWebSocket(options: UseWebSocketOptions = {}) {
 
   const subscribeToPool = useCallback((poolId: string) => {
     console.log(`Subscribing to pool: ${poolId}`)
-    // In a real implementation, this would send a message to the WebSocket server
   }, [])
 
   const unsubscribeFromPool = useCallback((poolId: string) => {
     console.log(`Unsubscribing from pool: ${poolId}`)
-    // In a real implementation, this would send a message to the WebSocket server
   }, [])
 
   const subscribeToPortfolio = useCallback(() => {
     console.log("Subscribing to portfolio updates")
-    // In a real implementation, this would send a message to the WebSocket server
   }, [])
 
-  // Connect on mount
   useEffect(() => {
     connect()
     return () => {
